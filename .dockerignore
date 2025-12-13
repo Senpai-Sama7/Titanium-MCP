@@ -1,0 +1,56 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Project artifacts (don't ship to container)
+worktrees/
+audits/
+workspace/
+*.log
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Makefile
+
+# Docker (prevent recursive copy)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Test artifacts
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# Security scan artifacts
+bandit-report.json

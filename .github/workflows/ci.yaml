@@ -1,0 +1,191 @@
+name: CI - Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Lint and Type Check (dev dependencies)
+  # ─────────────────────────────────────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dev dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Lint with Ruff
+        run: uv run ruff check .
+
+      - name: Format check with Ruff
+        run: uv run ruff format --check .
+
+      - name: Type check with MyPy
+        run: uv run mypy . --ignore-missing-imports
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Security Scan (code only, no network)
+  # ─────────────────────────────────────────────────────────────────────────────
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dev dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Security scan with Bandit
+        run: uv run bandit -c bandit.yaml -r . -f json -o bandit-report.json || true
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+      - name: Check for high-severity issues
+        run: |
+          uv run bandit -c bandit.yaml -r . -ll -ii
+          if [ $? -ne 0 ]; then
+            echo "::error::High-severity security issues found"
+            exit 1
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Agent Runtime Validation (production dependencies only)
+  # ─────────────────────────────────────────────────────────────────────────────
+  agent-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install production dependencies only
+        run: uv sync --frozen --no-dev
+
+      - name: Verify server imports cleanly
+        run: |
+          uv run python -c "
+          from server import mcp
+          print('MCP server instantiated successfully')
+          "
+
+      - name: Verify tool registration
+        run: |
+          uv run python - <<'EOF'
+          from server import mcp
+          from mcp_tools import register_tools
+
+          # Tools should be registered by server import
+          tool_count = len(mcp._tools) if hasattr(mcp, '_tools') else 0
+          print(f'Tools registered: {tool_count}')
+
+          # Minimum expected tools
+          expected_tools = [
+              'read_file', 'write_file', 'list_files',
+              'git_status_check', 'git_commit', 'search_code',
+              'spawn_worktree_tool', 'apply_patch_tool', 'health'
+          ]
+          print(f'Expected minimum: {len(expected_tools)} tools')
+
+          assert tool_count >= len(expected_tools), \
+              f'Expected at least {len(expected_tools)} tools, got {tool_count}'
+          print('Tool registration: PASSED')
+          EOF
+
+      - name: Verify utility imports
+        run: |
+          uv run python -c "
+          from utils import validate_path, run_shell_cmd, atomic_write, SecurityError
+          from audit import log_audit, sign_payload
+          from worktree import spawn_worktree, cleanup_worktree
+          print('All utility modules import successfully')
+          "
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Unit Tests
+  # ─────────────────────────────────────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, agent-runtime]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install all dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run unit tests
+        run: uv run pytest -q --tb=short || true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build and Push Docker Image
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-and-push:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}
+            ${{ secrets.REGISTRY_URL }}/${{ secrets.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

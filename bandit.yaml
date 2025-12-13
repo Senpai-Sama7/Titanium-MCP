@@ -1,0 +1,36 @@
+# Bandit Security Scanner Configuration
+# https://bandit.readthedocs.io/
+
+# Directories to exclude from scanning
+exclude_dirs:
+  - tests
+  - .venv
+  - worktrees
+  - audits
+  - .git
+
+# Rules to skip (with justification)
+skips:
+  # B404: import subprocess - Required for git/shell operations
+  # Mitigated by: SAFE_COMMANDS allowlist in mcp_tools.py
+  - B404
+
+  # B603: subprocess call without shell=True - Required for command execution
+  # Mitigated by: Command validation, path sanitization, timeout protection
+  - B603
+
+  # B607: partial executable paths - Git and approved tools
+  # Mitigated by: SAFE_COMMANDS allowlist, no user-controlled command names
+  - B607
+
+# Severity levels to report (default: all)
+# severity: low
+
+# Confidence levels to report (default: all)
+# confidence: low
+
+# Additional plugins to run (optional)
+# plugins: []
+
+# Baseline file for ignoring known issues (optional)
+# baseline: .bandit-baseline.json

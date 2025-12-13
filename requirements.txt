@@ -1,0 +1,5 @@
+fastmcp>=2.0.0
+gitpython>=3.1
+pydantic>=1.10
+prometheus-client>=0.16
+uvloop; platform_system != "Windows"

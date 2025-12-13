@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: titanium-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: titanium-operator
+  template:
+    metadata:
+      labels:
+        app: titanium-operator
+    spec:
+      containers:
+        - name: titanium
+          image: YOUR_REGISTRY/titanium-operator:latest
+          args: ["python", "server.py"]
+          resources:
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+              readOnly: false
+      volumes:
+        - name: workspace
+          emptyDir: {}

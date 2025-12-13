@@ -1,0 +1,70 @@
+[project]
+name = "titanium-repo-operator"
+version = "0.1.0"
+description = "Async-first, atomic, auditable MCP server for autonomous coding agents"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+dependencies = [
+    "fastmcp>=2.0.0",
+    "gitpython>=3.1",
+    "pydantic>=2.0",
+    "prometheus-client>=0.16",
+    "uvloop>=0.19; platform_system != 'Windows'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "bandit>=1.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "S",      # flake8-bandit
+    "ASYNC",  # flake8-async
+]
+ignore = [
+    "S603",   # subprocess call - validated upstream
+    "S607",   # partial executable paths - validated upstream
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # allow assert in tests
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "worktrees", "audits"]
+skips = ["B404", "B603", "B607"]

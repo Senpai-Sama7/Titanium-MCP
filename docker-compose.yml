@@ -1,0 +1,72 @@
+services:
+  titanium:
+    image: titanium-agent:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
+
+    volumes:
+      # Workspace is the ONLY writable persistent volume
+      - ./workspace:/workspace:rw
+
+    environment:
+      - REPO_ROOT=/workspace
+      - LOG_LEVEL=INFO
+      # In production, inject via secrets manager:
+      # - TITANIUM_AUDIT_KEY (from Vault/KMS)
+
+    # Filesystem hardening: read-only root
+    read_only: true
+
+    # Ephemeral writable paths (cleared on restart)
+    tmpfs:
+      - /tmp:mode=1777,size=100m
+      - /home/titanium/.cache:mode=0755,size=50m
+      - /home/titanium/.config:mode=0755,size=10m
+
+    # Drop ALL capabilities - agent needs none
+    cap_drop:
+      - ALL
+
+    # Prevent privilege escalation
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits (adjust per workload)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Network isolation (uncomment for full lockdown)
+    # network_mode: none
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import server; print('ok')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    restart: unless-stopped
+
+  # Development variant with relaxed constraints
+  titanium-dev:
+    extends:
+      service: titanium
+    profiles:
+      - dev
+    read_only: false
+    environment:
+      - REPO_ROOT=/workspace
+      - LOG_LEVEL=DEBUG
+      - TITANIUM_AUDIT_KEY=dev-key-change-me
+    volumes:
+      - ./workspace:/workspace:rw
+      - ./audits:/app/audits:rw
