@@ -1,7 +1,9 @@
-# Titanium Repo Operator — Complete Codebase
+# Titanium Repo Operator
 
-This repository implements the "Titanium" MCP server architecture described in previous conversation:
-an async-first, atomic, auditable, worktree-oriented MCP server for autonomous coding agents.
+## "Titanium" MCP server"
+
+### "An async-first, atomic, auditable, worktree-oriented MCP server for autonomous coding agents."
+
 
 ## Quick start (dev)
 1. Install `uv` (PEP-723 runner) if you want the single-file dev experience.
