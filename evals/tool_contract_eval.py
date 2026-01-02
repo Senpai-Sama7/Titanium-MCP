@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 
-from titanium_repo_operator.server import mcp
-from titanium_repo_operator.utils import SecurityError, validate_path
+from server import mcp
+from utils import SecurityError, validate_path
 
 EXPECTED_TOOLS = {
     "read_file",
@@ -29,11 +29,9 @@ def run_check() -> tuple[bool, dict[str, str]]:
     details: dict[str, str] = {}
     tools = asyncio.run(_fetch_tools())
 
-    expected_tools_present = EXPECTED_TOOLS.issubset(tools.keys())
-
     details["tool_count"] = str(len(tools))
     details["expected_tools"] = str(len(EXPECTED_TOOLS))
-    details["expected_tools_present"] = "pass" if expected_tools_present else "fail"
+    details["expected_tools_present"] = str(EXPECTED_TOOLS.issubset(set(tools.keys())))
 
     schema_ok = True
     for name, tool in tools.items():
@@ -55,7 +53,7 @@ def run_check() -> tuple[bool, dict[str, str]]:
 
     passed = (
         len(tools) >= len(EXPECTED_TOOLS)
-        and expected_tools_present
+        and details["expected_tools_present"] == "True"
         and schema_ok
         and forbidden_ok
     )

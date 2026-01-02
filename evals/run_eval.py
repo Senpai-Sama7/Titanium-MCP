@@ -9,7 +9,7 @@ from evals.smoke_eval import run_check as run_smoke
 from evals.tool_contract_eval import run_check as run_tool_contract
 
 
-def _timed(fn) -> tuple[bool, float, dict[str, str]]:
+def _timed(label: str, fn) -> tuple[bool, float, dict[str, str]]:
     start = time.perf_counter()
     passed, details = fn()
     duration_ms = (time.perf_counter() - start) * 1000
@@ -38,7 +38,7 @@ def main() -> int:
     for name, details in results.items():
         print(f"{name}: {details['result']} ({details['latency_ms']}ms)")
     print(f"checks_passed: {passed}/{len(checks)}")
-    print(f"safe_commands: {results.get('smoke', {}).get('safe_commands', '0')}")
+    print(f"safe_commands: {results['smoke'].get('safe_commands', '0')}")
 
     return 0 if passed == len(checks) else 1
 
