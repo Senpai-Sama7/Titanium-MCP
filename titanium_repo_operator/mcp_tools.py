@@ -13,13 +13,13 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from approval import get_approval_manager, require_approval
-from audit import log_audit
-from config import REPO_ROOT
-from policy import PolicyDecision, evaluate_command, evaluate_patch, evaluate_push
-from signing import get_commit_signer
-from utils import atomic_write, run_shell_cmd, truncate_output, validate_path
-from worktree import apply_patch_and_verify, cleanup_worktree, spawn_worktree
+from .approval import get_approval_manager, require_approval
+from .audit import log_audit
+from .config import REPO_ROOT
+from .policy import PolicyDecision, evaluate_command, evaluate_patch, evaluate_push
+from .signing import get_commit_signer
+from .utils import atomic_write, run_shell_cmd, truncate_output, validate_path
+from .worktree import apply_patch_and_verify, cleanup_worktree, spawn_worktree
 
 # Allowed safe commands used by run_check
 SAFE_COMMANDS = {

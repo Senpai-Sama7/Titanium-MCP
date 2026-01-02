@@ -1,25 +1,69 @@
 # Titanium Repo Operator
 
-## "Titanium" MCP server"
+Titanium Repo Operator is an async-first MCP server that delivers atomic, auditable repo operations for autonomous coding agents. Tested, CI-enforced, reproducible run.
 
-### "An async-first, atomic, auditable, worktree-oriented MCP server for autonomous coding agents."
+## What it does
+Provides a safe MCP tool contract for repo reads/writes, worktree-based patch application, and audit logging so agent actions are traceable and reversible.
 
+## Threat model / safety boundaries
+- Allowed: read/write files within the repo root and run approved commands in isolated worktrees.
+- Not allowed: path traversal outside the repo root (blocked by `validate_path`).
+- Guarded: privileged operations (e.g., pushes) require explicit approval via policy checks.
 
-## Quick start (dev)
-1. Install `uv` (PEP-723 runner) if you want the single-file dev experience.
+## Quickstart (local)
+Recommended (uv):
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+make run
 ```
 
-2. Run the server locally (it will create a cached venv from the `# /// script` header in `server.py`):
+Editable install (pip):
 ```bash
-uv run server.py
+pip install -e .
+titanium-mcp
 ```
 
-3. To register with Claude Code (dev local stdio):
+## Quickstart (docker)
 ```bash
-claude mcp add titanium -- uv run --with fastmcp --with gitpython /path/to/server.py
+docker compose up --build
 ```
+
+## Verification (60-second proof)
+```bash
+make test
+make eval
+```
+CI enforces lint, type checks, unit tests, and coverage (minimum 65%).
+
+## Evaluation
+Run the evaluation suite:
+```bash
+make eval
+```
+
+### Expected output
+```text
+EVAL RESULTS
+smoke: pass (12.34ms)
+tool_contract: pass (20.11ms)
+atomic_write: pass (3.42ms)
+checks_passed: 3/3
+safe_commands: 5
+```
+
+| Metric | Command | Expected |
+| --- | --- | --- |
+| Eval pass rate | `make eval` | 3/3 (100%) |
+| SAFE_COMMANDS count | `make eval` | 5 |
+
+## Evidence of correctness
+`make eval` includes lightweight checks for tool contract compliance and atomic writes.
+
+| Check | Signal | Example result |
+| --- | --- | --- |
+| Tool contract compliance | All expected tools registered; schemas generated | pass, <25ms |
+| Forbidden path rejection | `validate_path("../forbidden")` raises | pass, <5ms |
+| Atomic write guarantees | content matches latest, no temp files | pass, <5ms |
 
 ## Production notes
 - Use the included `Dockerfile` to build a container image.
@@ -27,13 +71,15 @@ claude mcp add titanium -- uv run --with fastmcp --with gitpython /path/to/serve
 - Integrate secrets with Vault / Cloud KMS; do not bake tokens into images.
 
 ## Files
-- `server.py` — main FastMCP server and CLI entrypoint
-- `mcp_tools.py` — MCP `@mcp.tool()` wrappers exposing safe tool contract
-- `worktree.py` — worktree lifecycle and patch application helpers
-- `audit.py` — audit logging and signing
-- `utils.py` — shared utilities (validate_path, run_shell_cmd, atomic write)
+- `titanium_repo_operator/` — package with server, tools, policy, and utilities
+- `server.py` — compatibility shim for `uv run server.py`
 - `Dockerfile` — production container
 - `k8s/deployment.yaml` — example k8s deployment manifest
 - `.github/workflows/ci.yaml` — CI workflow
 - `build-and-push.sh` — Docker build script for CI
 - `SECURITY.md` — security hardening guidance and checklist
+- `Makefile` — `make run`, `make test`, `make eval`
+- `evals/smoke_eval.py` — smoke checks for repo structure and SAFE_COMMANDS
+- `evals/tool_contract_eval.py` — tool registry and schema compliance checks
+- `evals/atomic_write_eval.py` — atomic write invariants check
+- `evals/run_eval.py` — combined evaluation runner

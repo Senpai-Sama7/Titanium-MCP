@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pytest
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
+from titanium_repo_operator import audit, worktree
 
 @pytest.mark.asyncio
 class TestWorktreeLifecycle:
@@ -18,12 +16,11 @@ class TestWorktreeLifecycle:
         monkeypatch.chdir(temp_repo)
 
         # Patch the module-level variables
-        import worktree
-        monkeypatch.setattr(worktree, "ROOT", temp_repo)
-        monkeypatch.setattr(worktree, "WORKTREES_ROOT", temp_repo / "worktrees")
+        monkeypatch.setattr(worktree, "REPO_ROOT", temp_repo)
+        monkeypatch.setattr(worktree, "WORKTREES_DIR", temp_repo / "worktrees")
         (temp_repo / "worktrees").mkdir(exist_ok=True)
 
-        from worktree import spawn_worktree
+        from titanium_repo_operator.worktree import spawn_worktree
 
         wt_path = await spawn_worktree("HEAD")
 
@@ -34,12 +31,11 @@ class TestWorktreeLifecycle:
         """Test cleaning up a worktree."""
         monkeypatch.chdir(temp_repo)
 
-        import worktree
-        monkeypatch.setattr(worktree, "ROOT", temp_repo)
-        monkeypatch.setattr(worktree, "WORKTREES_ROOT", temp_repo / "worktrees")
+        monkeypatch.setattr(worktree, "REPO_ROOT", temp_repo)
+        monkeypatch.setattr(worktree, "WORKTREES_DIR", temp_repo / "worktrees")
         (temp_repo / "worktrees").mkdir(exist_ok=True)
 
-        from worktree import cleanup_worktree, spawn_worktree
+        from titanium_repo_operator.worktree import cleanup_worktree, spawn_worktree
 
         wt_path = await spawn_worktree("HEAD")
         assert Path(wt_path).exists()
@@ -53,10 +49,9 @@ class TestWorktreeLifecycle:
         """Test that cleaning up nonexistent worktree doesn't error."""
         monkeypatch.chdir(temp_repo)
 
-        import worktree
-        monkeypatch.setattr(worktree, "ROOT", temp_repo)
+        monkeypatch.setattr(worktree, "REPO_ROOT", temp_repo)
 
-        from worktree import cleanup_worktree
+        from titanium_repo_operator.worktree import cleanup_worktree
 
         # Should not raise
         await cleanup_worktree("/nonexistent/path")
@@ -72,16 +67,13 @@ class TestPatchApplication:
         """Test applying a valid patch."""
         monkeypatch.chdir(temp_repo)
 
-        import worktree
-        import audit
-
-        monkeypatch.setattr(worktree, "ROOT", temp_repo)
-        monkeypatch.setattr(worktree, "WORKTREES_ROOT", temp_repo / "worktrees")
+        monkeypatch.setattr(worktree, "REPO_ROOT", temp_repo)
+        monkeypatch.setattr(worktree, "WORKTREES_DIR", temp_repo / "worktrees")
         monkeypatch.setattr(audit, "AUDITS_DIR", temp_repo / "audits")
         (temp_repo / "worktrees").mkdir(exist_ok=True)
         (temp_repo / "audits").mkdir(exist_ok=True)
 
-        from worktree import apply_patch_and_verify, cleanup_worktree, spawn_worktree
+        from titanium_repo_operator.worktree import apply_patch_and_verify, cleanup_worktree, spawn_worktree
 
         wt_path = await spawn_worktree("HEAD")
 
@@ -100,12 +92,11 @@ class TestPatchApplication:
         """Test applying an invalid patch."""
         monkeypatch.chdir(temp_repo)
 
-        import worktree
-        monkeypatch.setattr(worktree, "ROOT", temp_repo)
-        monkeypatch.setattr(worktree, "WORKTREES_ROOT", temp_repo / "worktrees")
+        monkeypatch.setattr(worktree, "REPO_ROOT", temp_repo)
+        monkeypatch.setattr(worktree, "WORKTREES_DIR", temp_repo / "worktrees")
         (temp_repo / "worktrees").mkdir(exist_ok=True)
 
-        from worktree import apply_patch_and_verify, cleanup_worktree, spawn_worktree
+        from titanium_repo_operator.worktree import apply_patch_and_verify, cleanup_worktree, spawn_worktree
 
         wt_path = await spawn_worktree("HEAD")
 
@@ -119,7 +110,7 @@ class TestPatchApplication:
 
     async def test_apply_patch_to_missing_worktree(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test applying patch to nonexistent worktree."""
-        from worktree import apply_patch_and_verify
+        from titanium_repo_operator.worktree import apply_patch_and_verify
 
         result = await apply_patch_and_verify("/nonexistent", "patch", run_checks=False)
 

@@ -98,39 +98,41 @@ jobs:
       - name: Verify server imports cleanly
         run: |
           uv run python -c "
-          from server import mcp
+          from titanium_repo_operator.server import mcp
           print('MCP server instantiated successfully')
           "
 
       - name: Verify tool registration
         run: |
           uv run python - <<'EOF'
-          from server import mcp
-          from mcp_tools import register_tools
+          import asyncio
+          from titanium_repo_operator.server import mcp
 
-          # Tools should be registered by server import
-          tool_count = len(mcp._tools) if hasattr(mcp, '_tools') else 0
-          print(f'Tools registered: {tool_count}')
+          async def main():
+              tools = await mcp.get_tools()
+              tool_count = len(tools)
+              print(f'Tools registered: {tool_count}')
 
-          # Minimum expected tools
-          expected_tools = [
-              'read_file', 'write_file', 'list_files',
-              'git_status_check', 'git_commit', 'search_code',
-              'spawn_worktree_tool', 'apply_patch_tool', 'health'
-          ]
-          print(f'Expected minimum: {len(expected_tools)} tools')
+              expected_tools = [
+                  'read_file', 'write_file', 'list_files',
+                  'git_status_check', 'git_commit', 'search_code',
+                  'spawn_worktree_tool', 'apply_patch_tool', 'health'
+              ]
+              print(f'Expected minimum: {len(expected_tools)} tools')
 
-          assert tool_count >= len(expected_tools), \
-              f'Expected at least {len(expected_tools)} tools, got {tool_count}'
-          print('Tool registration: PASSED')
+              assert tool_count >= len(expected_tools), \
+                  f'Expected at least {len(expected_tools)} tools, got {tool_count}'
+              print('Tool registration: PASSED')
+
+          asyncio.run(main())
           EOF
 
       - name: Verify utility imports
         run: |
           uv run python -c "
-          from utils import validate_path, run_shell_cmd, atomic_write, SecurityError
-          from audit import log_audit, sign_payload
-          from worktree import spawn_worktree, cleanup_worktree
+          from titanium_repo_operator.utils import validate_path, run_shell_cmd, atomic_write, SecurityError
+          from titanium_repo_operator.audit import log_audit, sign_payload
+          from titanium_repo_operator.worktree import spawn_worktree, cleanup_worktree
           print('All utility modules import successfully')
           "
 
@@ -157,7 +159,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run unit tests
-        run: uv run pytest -q --tb=short || true
+        run: make test
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Build and Push Docker Image
