@@ -5,7 +5,7 @@ import os
 import shlex
 from pathlib import Path
 
-from config import OUTPUT_TRUNCATE_LIMIT, REPO_ROOT, SHELL_TIMEOUT
+from .config import OUTPUT_TRUNCATE_LIMIT, REPO_ROOT, SHELL_TIMEOUT
 
 
 class SecurityError(Exception):

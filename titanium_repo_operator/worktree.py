@@ -5,9 +5,9 @@ import shutil
 import uuid
 from pathlib import Path
 
-from audit import log_audit
-from config import REPO_ROOT, WORKTREES_DIR
-from utils import run_shell_cmd
+from .audit import log_audit
+from .config import REPO_ROOT, WORKTREES_DIR
+from .utils import run_shell_cmd
 
 
 async def spawn_worktree(base_branch: str = "HEAD") -> str:

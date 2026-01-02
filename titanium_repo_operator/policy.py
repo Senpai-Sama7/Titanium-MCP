@@ -17,7 +17,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from config import (
+from .config import (
     MAX_FILES_PER_PATCH,
     MAX_ITERATIONS_PER_TASK,
     MAX_LOC_PER_PATCH,

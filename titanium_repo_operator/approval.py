@@ -13,8 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Awaitable
 
-from audit import log_audit
-from config import AUDITS_DIR
+from .audit import log_audit
+from .config import AUDITS_DIR
 
 
 class ApprovalStatus(Enum):

@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import AUDITS_DIR, AUDIT_HMAC_KEY
+from .config import AUDITS_DIR, AUDIT_HMAC_KEY
 
 
 def sign_payload(payload: bytes) -> str:

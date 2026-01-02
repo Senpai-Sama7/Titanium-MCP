@@ -98,7 +98,7 @@ jobs:
       - name: Verify server imports cleanly
         run: |
           uv run python -c "
-          from server import mcp
+          from titanium_repo_operator.server import mcp
           print('MCP server instantiated successfully')
           "
 
@@ -130,9 +130,9 @@ jobs:
       - name: Verify utility imports
         run: |
           uv run python -c "
-          from utils import validate_path, run_shell_cmd, atomic_write, SecurityError
-          from audit import log_audit, sign_payload
-          from worktree import spawn_worktree, cleanup_worktree
+          from titanium_repo_operator.utils import validate_path, run_shell_cmd, atomic_write, SecurityError
+          from titanium_repo_operator.audit import log_audit, sign_payload
+          from titanium_repo_operator.worktree import spawn_worktree, cleanup_worktree
           print('All utility modules import successfully')
           "
 
