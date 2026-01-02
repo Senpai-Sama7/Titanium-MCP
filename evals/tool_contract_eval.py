@@ -29,9 +29,11 @@ def run_check() -> tuple[bool, dict[str, str]]:
     details: dict[str, str] = {}
     tools = asyncio.run(_fetch_tools())
 
+    expected_tools_present = EXPECTED_TOOLS.issubset(tools.keys())
+
     details["tool_count"] = str(len(tools))
     details["expected_tools"] = str(len(EXPECTED_TOOLS))
-    details["expected_tools_present"] = str(EXPECTED_TOOLS.issubset(set(tools.keys())))
+    details["expected_tools_present"] = "pass" if expected_tools_present else "fail"
 
     schema_ok = True
     for name, tool in tools.items():
@@ -53,7 +55,7 @@ def run_check() -> tuple[bool, dict[str, str]]:
 
     passed = (
         len(tools) >= len(EXPECTED_TOOLS)
-        and details["expected_tools_present"] == "True"
+        and expected_tools_present
         and schema_ok
         and forbidden_ok
     )
