@@ -31,6 +31,9 @@ def main() -> int:
     for name, ok in checks.items():
         status = "pass" if ok else "fail"
         print(f"{name}: {status}")
+    missing = EXPECTED_SAFE_COMMANDS - SAFE_COMMANDS
+    if missing:
+        print(f"missing_safe_commands: {', '.join(sorted(missing))}")
     print(f"checks_passed: {passed}/{total}")
     print(f"safe_commands: {len(SAFE_COMMANDS)}")
 
