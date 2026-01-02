@@ -14,16 +14,20 @@ def run_check() -> tuple[bool, dict[str, str]]:
     with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp_dir:
         target = Path(tmp_dir) / "atomic_write.txt"
         atomic_write(target, "first")
+
+        # The .tmp file from the first write should be gone.
+        tmp_path = target.with_suffix(target.suffix + ".tmp")
+        tmp_clean_after_first = not tmp_path.exists()
+
         atomic_write(target, "second")
 
         content_ok = target.read_text(encoding="utf-8") == "second"
-        tmp_path = target.with_suffix(target.suffix + ".tmp")
-        tmp_clean = not tmp_path.exists()
+        tmp_clean_after_second = not tmp_path.exists()
 
         details["content_matches_latest"] = "pass" if content_ok else "fail"
-        details["no_tmp_leftover"] = "pass" if tmp_clean else "fail"
+        details["no_tmp_leftover"] = "pass" if tmp_clean_after_first and tmp_clean_after_second else "fail"
 
-    passed = content_ok and tmp_clean
+    passed = content_ok and tmp_clean_after_first and tmp_clean_after_second
     return passed, details
 
 
