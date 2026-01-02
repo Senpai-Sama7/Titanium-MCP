@@ -8,7 +8,7 @@ import asyncio
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Awaitable
@@ -126,7 +126,7 @@ class ApprovalManager:
             reason=reason,
             context=context or {},
             created_at=now,
-            expires_at=now.replace(second=now.second + timeout) if timeout > 0 else None,
+            expires_at=now + timedelta(seconds=timeout) if timeout > 0 else None,
         )
 
         self._pending[request.id] = request
