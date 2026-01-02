@@ -77,14 +77,12 @@ def verify_audit_entry(entry: dict) -> bool:
     Returns:
         True if signature is valid, False otherwise
     """
-    stored_hmac = entry.pop("hmac", None)
+    entry_copy = dict(entry)
+    stored_hmac = entry_copy.pop("hmac", None)
     if not stored_hmac:
         return False
 
-    payload = json.dumps(entry, sort_keys=True).encode("utf-8")
+    payload = json.dumps(entry_copy, sort_keys=True).encode("utf-8")
     expected_hmac = sign_payload(payload)
-
-    # Restore the entry
-    entry["hmac"] = stored_hmac
 
     return hmac.compare_digest(stored_hmac, expected_hmac)
