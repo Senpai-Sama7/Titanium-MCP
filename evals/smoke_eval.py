@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from titanium_repo_operator.config import REPO_ROOT
-from titanium_repo_operator.mcp_tools import SAFE_COMMANDS
+from config import REPO_ROOT
+from mcp_tools import SAFE_COMMANDS
 
 EXPECTED_SAFE_COMMANDS = {
     "test_unit",

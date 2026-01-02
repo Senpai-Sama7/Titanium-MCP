@@ -5,8 +5,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from titanium_repo_operator.config import REPO_ROOT
-from titanium_repo_operator.utils import atomic_write
+from config import REPO_ROOT
+from utils import atomic_write
 
 
 def run_check() -> tuple[bool, dict[str, str]]:

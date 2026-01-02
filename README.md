@@ -1,14 +1,43 @@
 # Titanium Repo Operator
 
-Titanium Repo Operator is an async-first MCP server that delivers atomic, auditable repo operations for autonomous coding agents. Tested, CI-enforced, reproducible run.
+Titanium Repo Operator is an async-first MCP server that provides atomic, auditable repo operations for autonomous coding agents. Tested, CI-enforced, reproducible run.
 
-## What it does
-Provides a safe MCP tool contract for repo reads/writes, worktree-based patch application, and audit logging so agent actions are traceable and reversible.
+## Quickstart
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+make test
+make run
+```
 
-## Threat model / safety boundaries
-- Allowed: read/write files within the repo root and run approved commands in isolated worktrees.
-- Not allowed: path traversal outside the repo root (blocked by `validate_path`).
-- Guarded: privileged operations (e.g., pushes) require explicit approval via policy checks.
+## Expected output
+```text
+EVAL RESULTS
+smoke: pass (12.34ms)
+tool_contract: pass (20.11ms)
+atomic_write: pass (3.42ms)
+checks_passed: 3/3
+safe_commands: 5
+```
+
+## Evaluation
+Run the evaluation suite:
+```bash
+make eval
+```
+
+| Metric | Command | Expected |
+| --- | --- | --- |
+| Eval pass rate | `make eval` | 3/3 (100%) |
+| SAFE_COMMANDS count | `make eval` | 5 |
+
+## Evidence of correctness
+`make eval` includes lightweight checks for tool contract compliance and atomic writes.
+
+| Check | Signal | Example result |
+| --- | --- | --- |
+| Tool contract compliance | All expected tools registered; schemas generated | pass, <25ms |
+| Forbidden path rejection | `validate_path("../forbidden")` raises | pass, <5ms |
+| Atomic write guarantees | content matches latest, no temp files | pass, <5ms |
 
 ## Quickstart (local)
 Recommended (uv):

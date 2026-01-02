@@ -106,7 +106,7 @@ jobs:
         run: |
           uv run python - <<'EOF'
           import asyncio
-          from titanium_repo_operator.server import mcp
+          from server import mcp
 
           async def main():
               tools = await mcp.get_tools()

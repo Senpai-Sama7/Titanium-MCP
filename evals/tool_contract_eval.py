@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 
-from titanium_repo_operator.server import mcp
-from titanium_repo_operator.utils import SecurityError, validate_path
+from server import mcp
+from utils import SecurityError, validate_path
 
 EXPECTED_TOOLS = {
     "read_file",
