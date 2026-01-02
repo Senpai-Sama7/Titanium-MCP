@@ -92,13 +92,28 @@ async def apply_patch_and_verify(
 
         # Apply patch
         apply_out = await run_shell_cmd(["git", "apply", str(patch_file)], cwd=wt)
+        if apply_out and ("error" in apply_out.lower() or "fatal" in apply_out.lower()):
+            return {"ok": False, "reason": "apply_failed", "output": apply_out}
 
         # Stage and commit changes
         await run_shell_cmd(["git", "add", "-A"], cwd=wt)
+        staged_changes = await run_shell_cmd(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=wt
+        )
+        if not staged_changes.strip():
+            return {"ok": False, "reason": "empty_commit", "output": staged_changes}
+
         commit_out = await run_shell_cmd(
             ["git", "commit", "-m", "Agent patch (staging)"],
             cwd=wt
         )
+        if commit_out and (
+            "error" in commit_out.lower()
+            or "fatal" in commit_out.lower()
+            or "nothing to commit" in commit_out.lower()
+        ):
+            return {"ok": False, "reason": "commit_failed", "output": commit_out}
 
         # Run verification checks if requested
         tests = None

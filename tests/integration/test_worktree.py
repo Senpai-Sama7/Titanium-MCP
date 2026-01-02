@@ -116,3 +116,28 @@ class TestPatchApplication:
 
         assert result["ok"] is False
         assert result["reason"] == "worktree_missing"
+
+    async def test_apply_patch_apply_failure(
+        self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test failing git apply returns an error response."""
+        worktree_path = temp_dir / "worktree"
+        worktree_path.mkdir()
+
+        async def fake_run_shell_cmd(args, cwd=None, timeout=0):
+            if args[:2] == ["git", "apply"] and "--check" in args:
+                return ""
+            if args[:2] == ["git", "apply"]:
+                return "error: patch failed"
+            return ""
+
+        monkeypatch.setattr(worktree, "run_shell_cmd", fake_run_shell_cmd)
+
+        result = await worktree.apply_patch_and_verify(
+            str(worktree_path),
+            "diff --git a/file.txt b/file.txt\n",
+            run_checks=False
+        )
+
+        assert result["ok"] is False
+        assert result["reason"] == "apply_failed"
