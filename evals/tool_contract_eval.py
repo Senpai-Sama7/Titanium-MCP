@@ -31,7 +31,7 @@ def run_check() -> tuple[bool, dict[str, str]]:
 
     details["tool_count"] = str(len(tools))
     details["expected_tools"] = str(len(EXPECTED_TOOLS))
-    details["expected_tools_present"] = str(EXPECTED_TOOLS.issubset(set(tools.keys())))
+    details["expected_tools_present"] = EXPECTED_TOOLS.issubset(set(tools.keys()))
 
     schema_ok = True
     for name, tool in tools.items():
