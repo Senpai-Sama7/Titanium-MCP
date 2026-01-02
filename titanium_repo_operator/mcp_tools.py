@@ -144,25 +144,38 @@ def register_tools(mcp: FastMCP) -> None:
         """
         p = validate_path(path)
         results = []
-        base_depth = len(str(p).split(os.sep))
-
-        for root, dirs, files in os.walk(p):
-            depth = len(root.split(os.sep)) - base_depth
-
-            if depth > max_depth:
-                del dirs[:]
-                continue
-
-            rel = os.path.relpath(root, str(REPO_ROOT))
-            if rel == ".":
-                rel = ""
-
-            for f in files:
-                if f.endswith('.pyc'):
+        if not recursive:
+            for entry in os.scandir(p):
+                if not entry.is_file():
                     continue
-                results.append(os.path.join(rel, f))
+                if entry.name.endswith('.pyc'):
+                    continue
+                rel = os.path.relpath(p, str(REPO_ROOT))
+                if rel == ".":
+                    rel = ""
+                results.append(os.path.join(rel, entry.name))
                 if len(results) >= 1000:
                     break
+        else:
+            base_depth = len(str(p).split(os.sep))
+
+            for root, dirs, files in os.walk(p):
+                depth = len(root.split(os.sep)) - base_depth
+
+                if depth > max_depth:
+                    del dirs[:]
+                    continue
+
+                rel = os.path.relpath(root, str(REPO_ROOT))
+                if rel == ".":
+                    rel = ""
+
+                for f in files:
+                    if f.endswith('.pyc'):
+                        continue
+                    results.append(os.path.join(rel, f))
+                    if len(results) >= 1000:
+                        break
 
         return "\n".join(results) or "No files found."
 
