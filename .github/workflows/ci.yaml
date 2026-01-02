@@ -96,11 +96,10 @@ jobs:
         run: uv sync --frozen --no-dev
 
       - name: Verify server imports cleanly
-        run: |
-          uv run python -c "
+          uv run python <<'EOF'
           from titanium_repo_operator.server import mcp
           print('MCP server instantiated successfully')
-          "
+          EOF
 
       - name: Verify tool registration
         run: |
