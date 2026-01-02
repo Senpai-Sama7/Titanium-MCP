@@ -1,9 +1,35 @@
 # Titanium Repo Operator
 
-## "Titanium" MCP server"
+Titanium Repo Operator is an async-first MCP server that provides atomic, auditable repo operations for autonomous coding agents. Tested, CI-enforced, reproducible run.
 
-### "An async-first, atomic, auditable, worktree-oriented MCP server for autonomous coding agents."
+## Quickstart
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+make test
+make eval
+make run
+```
 
+## Expected output
+```text
+EVAL RESULTS
+repo_root_exists: pass
+docker_compose_exists: pass
+safe_commands_present: pass
+checks_passed: 3/3
+safe_commands: 5
+```
+
+## Evaluation
+Run the tiny smoke eval:
+```bash
+make eval
+```
+
+| Metric | Command | Expected |
+| --- | --- | --- |
+| Smoke check pass rate | `make eval` | 3/3 (100%) |
+| SAFE_COMMANDS count | `make eval` | 5 |
 
 ## Quick start (dev)
 1. Install `uv` (PEP-723 runner) if you want the single-file dev experience.
@@ -37,3 +63,5 @@ claude mcp add titanium -- uv run --with fastmcp --with gitpython /path/to/serve
 - `.github/workflows/ci.yaml` — CI workflow
 - `build-and-push.sh` — Docker build script for CI
 - `SECURITY.md` — security hardening guidance and checklist
+- `Makefile` — `make run`, `make test`, `make eval`
+- `evals/smoke_eval.py` — small evaluation script for quick verification
