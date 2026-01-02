@@ -20,7 +20,10 @@ EXPECTED_SAFE_COMMANDS = {
 def main() -> int:
     checks = {
         "repo_root_exists": Path(REPO_ROOT).is_dir(),
-        "docker_compose_exists": (Path(REPO_ROOT) / "docker-compose.yml").is_file(),
+        "docker_compose_exists": any(
+            (Path(REPO_ROOT) / fname).is_file()
+            for fname in ("docker-compose.yml", "docker-compose.yaml")
+        ),
         "safe_commands_present": EXPECTED_SAFE_COMMANDS == SAFE_COMMANDS,
     }
 
