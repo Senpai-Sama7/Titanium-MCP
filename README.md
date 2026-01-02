@@ -6,6 +6,7 @@ Titanium Repo Operator is an async-first MCP server that provides atomic, audita
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 make test
+make eval
 make run
 ```
 
