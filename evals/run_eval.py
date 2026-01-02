@@ -9,7 +9,7 @@ from evals.smoke_eval import run_check as run_smoke
 from evals.tool_contract_eval import run_check as run_tool_contract
 
 
-def _timed(label: str, fn) -> tuple[bool, float, dict[str, str]]:
+def _timed(fn) -> tuple[bool, float, dict[str, str]]:
     start = time.perf_counter()
     passed, details = fn()
     duration_ms = (time.perf_counter() - start) * 1000
