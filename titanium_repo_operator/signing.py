@@ -16,7 +16,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from utils import run_shell_cmd
+from .utils import run_shell_cmd
 
 
 class SigningMethod(Enum):

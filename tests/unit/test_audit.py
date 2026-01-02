@@ -8,7 +8,7 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from audit import log_audit, sign_payload
+from titanium_repo_operator.audit import log_audit, sign_payload
 
 
 class TestSignPayload:

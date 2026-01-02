@@ -9,7 +9,7 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from utils import SecurityError, atomic_write, truncate_output, validate_path
+from titanium_repo_operator.utils import SecurityError, atomic_write, truncate_output, validate_path
 
 
 class TestValidatePath:
