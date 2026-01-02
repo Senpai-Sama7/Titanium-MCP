@@ -25,8 +25,13 @@ def validate_path(p: str) -> Path:
     Raises:
         SecurityError: If the path escapes the repository root
     """
-    candidate = (REPO_ROOT / p).resolve()
-    if not str(candidate).startswith(str(REPO_ROOT)):
+    repo_root = REPO_ROOT.resolve()
+    candidate = (repo_root / p).resolve()
+    try:
+        is_contained = candidate.is_relative_to(repo_root)
+    except AttributeError:
+        is_contained = os.path.commonpath([str(candidate), str(repo_root)]) == str(repo_root)
+    if not is_contained:
         raise SecurityError(f"SECURITY VIOLATION: Path '{p}' escapes repository root")
     return candidate
 

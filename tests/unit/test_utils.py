@@ -9,6 +9,7 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import titanium_repo_operator.utils as utils
 from titanium_repo_operator.utils import SecurityError, atomic_write, truncate_output, validate_path
 
 
@@ -18,6 +19,7 @@ class TestValidatePath:
     def test_valid_relative_path(self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that valid relative paths are accepted."""
         monkeypatch.chdir(temp_dir)
+        monkeypatch.setattr(utils, "REPO_ROOT", temp_dir)
         test_file = temp_dir / "test.txt"
         test_file.write_text("test")
 
@@ -28,6 +30,7 @@ class TestValidatePath:
     def test_path_traversal_blocked(self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that path traversal attempts are blocked."""
         monkeypatch.chdir(temp_dir)
+        monkeypatch.setattr(utils, "REPO_ROOT", temp_dir)
 
         with pytest.raises(SecurityError) as exc_info:
             validate_path("../../../etc/passwd")
@@ -39,6 +42,7 @@ class TestValidatePath:
     ) -> None:
         """Test that absolute paths outside root are blocked."""
         monkeypatch.chdir(temp_dir)
+        monkeypatch.setattr(utils, "REPO_ROOT", temp_dir)
 
         with pytest.raises(SecurityError):
             validate_path("/etc/passwd")
@@ -48,6 +52,7 @@ class TestValidatePath:
     ) -> None:
         """Test that symlink escapes are blocked."""
         monkeypatch.chdir(temp_dir)
+        monkeypatch.setattr(utils, "REPO_ROOT", temp_dir)
 
         # Create a symlink pointing outside
         symlink = temp_dir / "escape"
@@ -58,6 +63,24 @@ class TestValidatePath:
 
         with pytest.raises(SecurityError):
             validate_path("escape/passwd")
+
+    def test_path_containment_guard(self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that path containment checks reject sibling repo names."""
+        repo_root = temp_dir / "repo"
+        repo_root.mkdir()
+        monkeypatch.setattr(utils, "REPO_ROOT", repo_root)
+
+        allowed = repo_root / "subdir" / "file"
+        allowed.parent.mkdir(parents=True)
+        allowed.write_text("ok")
+
+        assert validate_path(str(allowed)) == allowed
+
+        with pytest.raises(SecurityError):
+            validate_path("../repo-backup")
+
+        with pytest.raises(SecurityError):
+            validate_path("/repo-backup")
 
 
 class TestTruncateOutput:
