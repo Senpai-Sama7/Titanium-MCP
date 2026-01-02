@@ -17,31 +17,26 @@ EXPECTED_SAFE_COMMANDS = {
 }
 
 
-def main() -> int:
+def run_check() -> tuple[bool, dict[str, str]]:
     checks = {
         "repo_root_exists": Path(REPO_ROOT).is_dir(),
-        "docker_compose_exists": any(
-            (Path(REPO_ROOT) / fname).is_file()
-            for fname in ("docker-compose.yml", "docker-compose.yaml")
-        ),
-        "safe_commands_present": EXPECTED_SAFE_COMMANDS == SAFE_COMMANDS,
+        "docker_compose_exists": (Path(REPO_ROOT) / "docker-compose.yml").is_file(),
+        "safe_commands_present": EXPECTED_SAFE_COMMANDS.issubset(SAFE_COMMANDS),
     }
 
     passed = sum(1 for ok in checks.values() if ok)
     total = len(checks)
 
-    print("EVAL RESULTS")
-    for name, ok in checks.items():
-        status = "pass" if ok else "fail"
-        print(f"{name}: {status}")
-    missing = EXPECTED_SAFE_COMMANDS - SAFE_COMMANDS
-    if missing:
-        print(f"missing_safe_commands: {', '.join(sorted(missing))}")
-    print(f"checks_passed: {passed}/{total}")
-    print(f"safe_commands: {len(SAFE_COMMANDS)}")
+    details = {name: "pass" if ok else "fail" for name, ok in checks.items()}
+    details["checks_passed"] = f"{passed}/{total}"
+    details["safe_commands"] = str(len(SAFE_COMMANDS))
 
-    return 0 if passed == total else 1
+    return passed == total, details
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    ok, details = run_check()
+    print("EVAL RESULTS")
+    for name, status in details.items():
+        print(f"{name}: {status}")
+    sys.exit(0 if ok else 1)

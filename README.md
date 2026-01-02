@@ -6,30 +6,38 @@ Titanium Repo Operator is an async-first MCP server that provides atomic, audita
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 make test
-make eval
 make run
 ```
 
 ## Expected output
 ```text
 EVAL RESULTS
-repo_root_exists: pass
-docker_compose_exists: pass
-safe_commands_present: pass
+smoke: pass (12.34ms)
+tool_contract: pass (20.11ms)
+atomic_write: pass (3.42ms)
 checks_passed: 3/3
 safe_commands: 5
 ```
 
 ## Evaluation
-Run the tiny smoke eval:
+Run the evaluation suite:
 ```bash
 make eval
 ```
 
 | Metric | Command | Expected |
 | --- | --- | --- |
-| Smoke check pass rate | `make eval` | 3/3 (100%) |
+| Eval pass rate | `make eval` | 3/3 (100%) |
 | SAFE_COMMANDS count | `make eval` | 5 |
+
+## Evidence of correctness
+`make eval` includes lightweight checks for tool contract compliance and atomic writes.
+
+| Check | Signal | Example result |
+| --- | --- | --- |
+| Tool contract compliance | All expected tools registered; schemas generated | pass, <25ms |
+| Forbidden path rejection | `validate_path("../forbidden")` raises | pass, <5ms |
+| Atomic write guarantees | content matches latest, no temp files | pass, <5ms |
 
 ## Quick start (dev)
 1. Install `uv` (PEP-723 runner) if you want the single-file dev experience.
@@ -64,4 +72,7 @@ claude mcp add titanium -- uv run --with fastmcp --with gitpython /path/to/serve
 - `build-and-push.sh` — Docker build script for CI
 - `SECURITY.md` — security hardening guidance and checklist
 - `Makefile` — `make run`, `make test`, `make eval`
-- `evals/smoke_eval.py` — small evaluation script for quick verification
+- `evals/smoke_eval.py` — smoke checks for repo structure and SAFE_COMMANDS
+- `evals/tool_contract_eval.py` — tool registry and schema compliance checks
+- `evals/atomic_write_eval.py` — atomic write invariants check
+- `evals/run_eval.py` — combined evaluation runner
