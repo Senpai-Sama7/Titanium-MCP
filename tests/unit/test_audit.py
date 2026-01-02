@@ -7,7 +7,7 @@ import pytest
 
 # (removed legacy sys.path manipulation)
 
-from titanium_repo_operator.audit import log_audit, sign_payload
+from titanium_repo_operator.audit import log_audit, sign_payload, verify_audit_entry
 
 
 class TestSignPayload:
@@ -100,3 +100,16 @@ class TestLogAudit:
         expected_hmac = sign_payload(payload)
 
         assert result["hmac"] == expected_hmac
+
+
+class TestVerifyAuditEntry:
+    """Tests for audit entry verification."""
+
+    def test_verify_audit_entry_keeps_hmac(self) -> None:
+        """Test that verification does not remove hmac from entry."""
+        entry = {"ts": "2024-01-01T00:00:00Z", "event": "test", "meta": {"ok": True}}
+        payload = json.dumps(entry, sort_keys=True).encode("utf-8")
+        entry["hmac"] = sign_payload(payload)
+
+        assert verify_audit_entry(entry)
+        assert "hmac" in entry
