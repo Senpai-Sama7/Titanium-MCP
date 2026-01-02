@@ -5,8 +5,7 @@ from pathlib import Path
 
 import pytest
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# (removed legacy sys.path manipulation)
 
 from titanium_repo_operator.audit import log_audit, sign_payload
 
