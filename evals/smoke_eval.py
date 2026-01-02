@@ -21,7 +21,7 @@ def main() -> int:
     checks = {
         "repo_root_exists": Path(REPO_ROOT).is_dir(),
         "docker_compose_exists": (Path(REPO_ROOT) / "docker-compose.yml").is_file(),
-        "safe_commands_present": EXPECTED_SAFE_COMMANDS.issubset(SAFE_COMMANDS),
+        "safe_commands_present": EXPECTED_SAFE_COMMANDS == SAFE_COMMANDS,
     }
 
     passed = sum(1 for ok in checks.values() if ok)
