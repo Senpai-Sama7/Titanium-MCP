@@ -1,6 +1,7 @@
 """Worktree management: create ephemeral worktrees, apply patches safely, run checks."""
 
 import hashlib
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -8,6 +9,8 @@ from pathlib import Path
 from .audit import log_audit
 from .config import REPO_ROOT, WORKTREES_DIR
 from .utils import run_shell_cmd
+
+ERROR_PATTERN = re.compile(r"(error|fatal):", re.IGNORECASE)
 
 
 async def spawn_worktree(base_branch: str = "HEAD") -> str:
@@ -85,14 +88,20 @@ async def apply_patch_and_verify(
     patch_file.write_text(patch_text, encoding="utf-8")
 
     try:
-        # Verify patch can be applied
-        check = await run_shell_cmd(["git", "apply", "--check", str(patch_file)], cwd=wt)
-        if check and ("error" in check.lower() or "fatal" in check.lower()):
+        # Verify patch can be applied (silence whitespace warnings)
+        check = await run_shell_cmd(
+            ["git", "apply", "--check", "--whitespace=nowarn", str(patch_file)],
+            cwd=wt,
+        )
+        if check and ERROR_PATTERN.search(check):
             return {"ok": False, "reason": "patch_check_failed", "output": check}
 
         # Apply patch
-        apply_out = await run_shell_cmd(["git", "apply", str(patch_file)], cwd=wt)
-        if apply_out and ("error" in apply_out.lower() or "fatal" in apply_out.lower()):
+        apply_out = await run_shell_cmd(
+            ["git", "apply", "--whitespace=nowarn", str(patch_file)],
+            cwd=wt,
+        )
+        if apply_out and ERROR_PATTERN.search(apply_out):
             return {"ok": False, "reason": "apply_failed", "output": apply_out}
 
         # Stage and commit changes
@@ -106,11 +115,10 @@ async def apply_patch_and_verify(
 
         commit_out = await run_shell_cmd(
             ["git", "commit", "-m", "Agent patch (staging)"],
-            cwd=wt
+            cwd=wt,
         )
         if commit_out and (
-            "error" in commit_out.lower()
-            or "fatal" in commit_out.lower()
+            ERROR_PATTERN.search(commit_out)
             or "nothing to commit" in commit_out.lower()
         ):
             return {"ok": False, "reason": "commit_failed", "output": commit_out}

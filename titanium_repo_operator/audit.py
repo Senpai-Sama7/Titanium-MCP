@@ -32,6 +32,7 @@ def _write_jsonl(filename: Path, obj: dict) -> None:
         filename: Path to the JSONL file
         obj: Dictionary to write as JSON
     """
+    filename.parent.mkdir(parents=True, exist_ok=True)
     with open(filename, "a", encoding="utf-8") as f:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 

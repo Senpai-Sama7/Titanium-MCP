@@ -7,6 +7,7 @@ import pytest
 
 # (removed legacy sys.path manipulation)
 
+from titanium_repo_operator import audit as audit_module
 from titanium_repo_operator.audit import log_audit, sign_payload, verify_audit_entry
 
 
@@ -39,8 +40,7 @@ class TestLogAudit:
     def test_log_audit_structure(self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that audit logs have correct structure."""
         # Patch AUDITS_DIR
-        import audit
-        monkeypatch.setattr(audit, "AUDITS_DIR", temp_dir)
+        monkeypatch.setattr(audit_module, "AUDITS_DIR", temp_dir)
 
         result = log_audit("test_event", {"key": "value"})
 
@@ -55,8 +55,7 @@ class TestLogAudit:
         self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that audit logs are written to file."""
-        import audit
-        monkeypatch.setattr(audit, "AUDITS_DIR", temp_dir)
+        monkeypatch.setattr(audit_module, "AUDITS_DIR", temp_dir)
 
         log_audit("test_event", {"test": True})
 
@@ -73,8 +72,7 @@ class TestLogAudit:
         self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that timestamp is ISO format with Z suffix."""
-        import audit
-        monkeypatch.setattr(audit, "AUDITS_DIR", temp_dir)
+        monkeypatch.setattr(audit_module, "AUDITS_DIR", temp_dir)
 
         result = log_audit("test", {})
 
@@ -85,8 +83,7 @@ class TestLogAudit:
         self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that HMAC can be verified."""
-        import audit
-        monkeypatch.setattr(audit, "AUDITS_DIR", temp_dir)
+        monkeypatch.setattr(audit_module, "AUDITS_DIR", temp_dir)
 
         result = log_audit("test", {"data": "value"})
 
