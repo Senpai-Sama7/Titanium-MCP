@@ -38,7 +38,7 @@ def main() -> int:
     for name, details in results.items():
         print(f"{name}: {details['result']} ({details['latency_ms']}ms)")
     print(f"checks_passed: {passed}/{len(checks)}")
-    print(f"safe_commands: {results['smoke'].get('safe_commands', '0')}")
+    print(f"safe_commands: {results.get('smoke', {}).get('safe_commands', '0')}")
 
     return 0 if passed == len(checks) else 1
 
