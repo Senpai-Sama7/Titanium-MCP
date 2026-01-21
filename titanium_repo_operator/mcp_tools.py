@@ -192,7 +192,9 @@ def register_tools(mcp: FastMCP) -> None:
         """
         status = await run_shell_cmd(["git", "status", "--porcelain"])
         branch = await run_shell_cmd(["git", "branch", "--show-current"])
-        out = f"Branch: {branch.strip()}\nChanges:\n{status}"
+        if not status.ok or not branch.ok:
+            return f"Error: {status.output or branch.output}"
+        out = f"Branch: {branch.output.strip()}\nChanges:\n{status.output}"
         log_audit("git_status_check", {})
         return out
 
@@ -207,7 +209,9 @@ def register_tools(mcp: FastMCP) -> None:
         Returns:
             Commit result or error
         """
-        await run_shell_cmd(["git", "add", "-u"])
+        add_result = await run_shell_cmd(["git", "add", "-u"])
+        if not add_result.ok:
+            return f"Error: {add_result.output}"
 
         if sign:
             signer = get_commit_signer()
@@ -218,8 +222,10 @@ def register_tools(mcp: FastMCP) -> None:
             return result
         else:
             res = await run_shell_cmd(["git", "commit", "-m", message])
+            if not res.ok:
+                return f"Error: {res.output}"
             log_audit("git_commit", {"message": message, "signed": False})
-            return res
+            return res.output
 
     @mcp.tool()
     async def git_diff_staged() -> str:
@@ -229,7 +235,9 @@ def register_tools(mcp: FastMCP) -> None:
             Staged diff output
         """
         diff = await run_shell_cmd(["git", "diff", "--staged"])
-        return diff
+        if not diff.ok:
+            return f"Error: {diff.output}"
+        return diff.output
 
     @mcp.tool()
     async def git_push(
@@ -248,7 +256,9 @@ def register_tools(mcp: FastMCP) -> None:
         # Determine target branch
         if branch is None:
             branch_result = await run_shell_cmd(["git", "branch", "--show-current"])
-            branch = branch_result.strip()
+            if not branch_result.ok:
+                return f"Error: {branch_result.output}"
+            branch = branch_result.output.strip()
 
         # Check policy
         is_protected = branch in ("main", "master", "production", "prod")
@@ -278,8 +288,10 @@ def register_tools(mcp: FastMCP) -> None:
             cmd.extend(["-u", "origin", branch])
 
         result = await run_shell_cmd(cmd)
+        if not result.ok:
+            return f"Error: {result.output}"
         log_audit("git_push", {"branch": branch, "force": force})
-        return result
+        return result.output
 
     # =========================================================================
     # Code Search
@@ -306,10 +318,21 @@ def register_tools(mcp: FastMCP) -> None:
         if policy_result.decision == PolicyDecision.DENY:
             return f"Policy violation: {policy_result.violations[0].reason}"
 
+        if policy_result.requires_approval:
+            approved = await require_approval(
+                "search_code",
+                policy_result.approval_reason or "Search requires approval",
+                {"query": query},
+            )
+            if not approved:
+                return "Operation cancelled: approval denied or timed out"
+
         res = await run_shell_cmd(args)
-        if "not found" in res.lower() or "command not found" in res.lower():
+        if res.returncode == 127:
             return "Error: 'rg' not available; install ripgrep for best results."
-        return res
+        if not res.ok:
+            return f"Error: {res.output}"
+        return res.output
 
     @mcp.tool()
     async def symbol_definition(symbol_name: str, path: str = ".") -> str:
@@ -368,9 +391,27 @@ def register_tools(mcp: FastMCP) -> None:
         if policy_result.decision == PolicyDecision.DENY:
             return f"Policy violation: {policy_result.violations[0].reason}"
 
+        if policy_result.requires_approval:
+            approved = await require_approval(
+                "run_check",
+                policy_result.approval_reason or "Check requires approval",
+                {"check": check_type},
+            )
+            if not approved:
+                return "Operation cancelled: approval denied or timed out"
+
         out = await run_shell_cmd(cmd)
-        log_audit("run_check", {"check": check_type})
-        return out
+        log_audit(
+            "run_check",
+            {
+                "check": check_type,
+                "returncode": out.returncode,
+                "duration_ms": f"{out.duration_ms:.2f}",
+            },
+        )
+        if not out.ok:
+            return f"Error: {out.output}"
+        return out.output
 
     # =========================================================================
     # Worktree Operations
@@ -409,6 +450,12 @@ def register_tools(mcp: FastMCP) -> None:
         """
         # Extract affected files for policy check
         affected_files = _extract_affected_files(patch_text)
+        if not affected_files:
+            return {
+                "ok": False,
+                "reason": "invalid_patch",
+                "violations": ["No affected files found in patch headers"],
+            }
 
         # Check policy
         policy_result = evaluate_patch(patch_text, affected_files, task_id)
@@ -470,9 +517,15 @@ def register_tools(mcp: FastMCP) -> None:
         Returns:
             Result message
         """
-        await run_shell_cmd(["git", "checkout", "-b", branch_name, base_branch])
-        await run_shell_cmd(["git", "add", "-A"])
-        await run_shell_cmd(["git", "commit", "-m", title])
+        checkout = await run_shell_cmd(["git", "checkout", "-b", branch_name, base_branch])
+        if not checkout.ok:
+            return f"Error: {checkout.output}"
+        add_result = await run_shell_cmd(["git", "add", "-A"])
+        if not add_result.ok:
+            return f"Error: {add_result.output}"
+        commit_result = await run_shell_cmd(["git", "commit", "-m", title])
+        if not commit_result.ok:
+            return f"Error: {commit_result.output}"
 
         out = "Created branch and committed locally"
 
@@ -490,7 +543,9 @@ def register_tools(mcp: FastMCP) -> None:
                     return out + " (push cancelled: approval denied)"
 
             push_result = await run_shell_cmd(["git", "push", "-u", "origin", branch_name])
-            out = push_result
+            if not push_result.ok:
+                return f"Error: {push_result.output}"
+            out = push_result.output
 
         log_audit("create_pr", {"branch": branch_name, "title": title, "pushed": push})
         return out
@@ -507,9 +562,9 @@ def register_tools(mcp: FastMCP) -> None:
             Diff of last commit
         """
         diff = await run_shell_cmd(["git", "--no-pager", "diff", "HEAD~1..HEAD"])
-        if not diff:
+        if not diff.output:
             return "No recent changes detected."
-        return truncate_output(diff)
+        return truncate_output(diff.output)
 
     @mcp.tool()
     async def health() -> str:

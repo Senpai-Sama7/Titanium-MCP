@@ -6,15 +6,17 @@ human approval before proceeding with sensitive actions.
 
 import asyncio
 import json
+import os
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Awaitable
 
 from .audit import log_audit
 from .config import AUDITS_DIR
+from .utils import atomic_write
 
 
 class ApprovalStatus(Enum):
@@ -74,6 +76,29 @@ class ApprovalManager:
         self._callbacks: dict[str, asyncio.Event] = {}
         self._load_pending()
 
+    def _lock_path(self) -> Path:
+        return self.approval_file.with_suffix(self.approval_file.suffix + ".lock")
+
+    def _acquire_lock(self, timeout_seconds: float = 5.0) -> int:
+        lock_path = self._lock_path()
+        start = time.time()
+        while True:
+            try:
+                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                return fd
+            except FileExistsError:
+                if time.time() - start > timeout_seconds:
+                    raise TimeoutError("Timed out waiting for approval file lock")
+                time.sleep(0.05)
+
+    def _release_lock(self, fd: int) -> None:
+        lock_path = self._lock_path()
+        try:
+            os.close(fd)
+        finally:
+            if lock_path.exists():
+                lock_path.unlink()
+
     def _load_pending(self) -> None:
         """Load pending approvals from disk."""
         if self.approval_file.exists():
@@ -97,7 +122,11 @@ class ApprovalManager:
     def _save_pending(self) -> None:
         """Persist pending approvals to disk."""
         data = [req.to_dict() for req in self._pending.values()]
-        self.approval_file.write_text(json.dumps(data, indent=2))
+        fd = self._acquire_lock()
+        try:
+            atomic_write(self.approval_file, json.dumps(data, indent=2))
+        finally:
+            self._release_lock(fd)
 
     async def request_approval(
         self,

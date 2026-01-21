@@ -98,6 +98,7 @@ safe_commands: 5
 - Use the included `Dockerfile` to build a container image.
 - Run containers with network disabled by default and mount workspace under `/workspace`.
 - Integrate secrets with Vault / Cloud KMS; do not bake tokens into images.
+- Set `TITANIUM_AUDIT_KEY` for non-dev environments; default keys are rejected.
 
 ## Files
 - `titanium_repo_operator/` — package with server, tools, policy, and utilities

@@ -3,6 +3,8 @@
 import asyncio
 import os
 import shlex
+import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from .config import OUTPUT_TRUNCATE_LIMIT, REPO_ROOT, SHELL_TIMEOUT
@@ -11,6 +13,24 @@ from .config import OUTPUT_TRUNCATE_LIMIT, REPO_ROOT, SHELL_TIMEOUT
 class SecurityError(Exception):
     """Raised when a security violation is detected."""
     pass
+
+
+@dataclass
+class CommandResult:
+    """Result of a shell command execution."""
+
+    stdout: str
+    stderr: str
+    returncode: int
+    duration_ms: float
+
+    @property
+    def output(self) -> str:
+        return f"{self.stdout}{self.stderr}"
+
+    @property
+    def ok(self) -> bool:
+        return self.returncode == 0
 
 
 def validate_path(p: str) -> Path:
@@ -61,7 +81,7 @@ async def run_shell_cmd(
     args: list[str] | str,
     cwd: Path | None = None,
     timeout: int = SHELL_TIMEOUT
-) -> str:
+) -> CommandResult:
     """Execute a shell command safely with timeout.
 
     Uses create_subprocess_exec which does NOT invoke a shell,
@@ -79,6 +99,7 @@ async def run_shell_cmd(
     if isinstance(args, str):
         args = shlex.split(args)
 
+    start = time.perf_counter()
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -88,16 +109,41 @@ async def run_shell_cmd(
         )
 
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        out = (stdout.decode() if stdout else "") + (stderr.decode() if stderr else "")
-        return truncate_output(out)
+        duration_ms = (time.perf_counter() - start) * 1000
+        stdout_text = stdout.decode() if stdout else ""
+        stderr_text = stderr.decode() if stderr else ""
+        return CommandResult(
+            stdout=truncate_output(stdout_text),
+            stderr=truncate_output(stderr_text),
+            returncode=proc.returncode or 0,
+            duration_ms=duration_ms,
+        )
 
     except asyncio.TimeoutError:
         proc.kill()
-        return f"Error: Command timed out after {timeout}s"
+        duration_ms = (time.perf_counter() - start) * 1000
+        return CommandResult(
+            stdout="",
+            stderr=f"Error: Command timed out after {timeout}s",
+            returncode=124,
+            duration_ms=duration_ms,
+        )
     except FileNotFoundError:
-        return f"Error: Command not found: {args[0]}"
+        duration_ms = (time.perf_counter() - start) * 1000
+        return CommandResult(
+            stdout="",
+            stderr=f"Error: Command not found: {args[0]}",
+            returncode=127,
+            duration_ms=duration_ms,
+        )
     except Exception as e:
-        return f"Error executing command: {e}"
+        duration_ms = (time.perf_counter() - start) * 1000
+        return CommandResult(
+            stdout="",
+            stderr=f"Error executing command: {e}",
+            returncode=1,
+            duration_ms=duration_ms,
+        )
 
 
 def atomic_write(path: Path, content: str) -> None:

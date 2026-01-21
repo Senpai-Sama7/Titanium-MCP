@@ -1,7 +1,6 @@
 """Worktree management: create ephemeral worktrees, apply patches safely, run checks."""
 
 import hashlib
-import re
 import shutil
 import uuid
 from pathlib import Path
@@ -9,8 +8,6 @@ from pathlib import Path
 from .audit import log_audit
 from .config import REPO_ROOT, WORKTREES_DIR
 from .utils import run_shell_cmd
-
-ERROR_PATTERN = re.compile(r"(error|fatal):", re.IGNORECASE)
 
 
 async def spawn_worktree(base_branch: str = "HEAD") -> str:
@@ -31,11 +28,11 @@ async def spawn_worktree(base_branch: str = "HEAD") -> str:
 
     out = await run_shell_cmd(["git", "worktree", "add", str(wt_path), base_branch])
 
-    if "fatal" in out.lower() or "error" in out.lower():
+    if not out.ok:
         # Clean up failed worktree
         if wt_path.exists():
             shutil.rmtree(wt_path, ignore_errors=True)
-        raise RuntimeError(f"Failed to spawn worktree: {out}")
+        raise RuntimeError(f"Failed to spawn worktree: {out.output}")
 
     log_audit("worktree_spawned", {"worktree_id": worktree_id, "base": base_branch})
     return str(wt_path)
@@ -93,35 +90,36 @@ async def apply_patch_and_verify(
             ["git", "apply", "--check", "--whitespace=nowarn", str(patch_file)],
             cwd=wt,
         )
-        if check and ERROR_PATTERN.search(check):
-            return {"ok": False, "reason": "patch_check_failed", "output": check}
+        if not check.ok:
+            return {"ok": False, "reason": "patch_check_failed", "output": check.output}
 
         # Apply patch
         apply_out = await run_shell_cmd(
             ["git", "apply", "--whitespace=nowarn", str(patch_file)],
             cwd=wt,
         )
-        if apply_out and ERROR_PATTERN.search(apply_out):
-            return {"ok": False, "reason": "apply_failed", "output": apply_out}
+        if not apply_out.ok:
+            return {"ok": False, "reason": "apply_failed", "output": apply_out.output}
 
         # Stage and commit changes
-        await run_shell_cmd(["git", "add", "-A"], cwd=wt)
+        add_result = await run_shell_cmd(["git", "add", "-A"], cwd=wt)
+        if not add_result.ok:
+            return {"ok": False, "reason": "add_failed", "output": add_result.output}
         staged_changes = await run_shell_cmd(
             ["git", "diff", "--cached", "--name-only"],
             cwd=wt
         )
-        if not staged_changes.strip():
-            return {"ok": False, "reason": "empty_commit", "output": staged_changes}
+        if not staged_changes.ok:
+            return {"ok": False, "reason": "diff_failed", "output": staged_changes.output}
+        if not staged_changes.output.strip():
+            return {"ok": False, "reason": "empty_commit", "output": staged_changes.output}
 
         commit_out = await run_shell_cmd(
             ["git", "commit", "-m", "Agent patch (staging)"],
             cwd=wt,
         )
-        if commit_out and (
-            ERROR_PATTERN.search(commit_out)
-            or "nothing to commit" in commit_out.lower()
-        ):
-            return {"ok": False, "reason": "commit_failed", "output": commit_out}
+        if not commit_out.ok:
+            return {"ok": False, "reason": "commit_failed", "output": commit_out.output}
 
         # Run verification checks if requested
         tests = None
@@ -135,16 +133,20 @@ async def apply_patch_and_verify(
         audit_entry = {
             "worktree": str(wt.relative_to(REPO_ROOT)) if str(wt).startswith(str(REPO_ROOT)) else str(wt),
             "diff_hash": diff_hash,
-            "commit": commit_out.strip() if commit_out else "",
-            "tests_passed": tests is None or "failed" not in tests.lower() if tests else None,
+            "commit": commit_out.output.strip(),
+            "commit_returncode": commit_out.returncode,
+            "commit_duration_ms": f"{commit_out.duration_ms:.2f}",
+            "tests_passed": tests is None or tests.ok if tests else None,
+            "tests_returncode": tests.returncode if tests else None,
+            "tests_duration_ms": f"{tests.duration_ms:.2f}" if tests else None,
         }
         log_audit("patch_applied", audit_entry)
 
         return {
             "ok": True,
             "diff_hash": diff_hash,
-            "commit": commit_out,
-            "tests": tests
+            "commit": commit_out.output,
+            "tests": tests.output if tests else None
         }
 
     finally:

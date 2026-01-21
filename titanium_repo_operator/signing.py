@@ -10,7 +10,6 @@ to ensure cryptographic proof of agent-generated changes.
 """
 
 import os
-import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -97,7 +96,7 @@ class CommitSigner:
 
         for cmd in commands:
             result = await run_shell_cmd(cmd, cwd=cwd)
-            if "error" in result.lower():
+            if not result.ok:
                 return False
 
         return True
@@ -125,7 +124,7 @@ class CommitSigner:
 
         for cmd in commands:
             result = await run_shell_cmd(cmd, cwd=cwd)
-            if "error" in result.lower():
+            if not result.ok:
                 return False
 
         return True
@@ -137,7 +136,7 @@ class CommitSigner:
         """
         # Check if gitsign is available
         check = await run_shell_cmd(["which", "gitsign"])
-        if "not found" in check.lower() or not check.strip():
+        if not check.ok or not check.output.strip():
             return False
 
         commands = [
@@ -148,7 +147,7 @@ class CommitSigner:
 
         for cmd in commands:
             result = await run_shell_cmd(cmd, cwd=cwd)
-            if "error" in result.lower():
+            if not result.ok:
                 return False
 
         return True
@@ -188,10 +187,10 @@ class CommitSigner:
 
         result = await run_shell_cmd(cmd, cwd=repo_path)
 
-        if "error" in result.lower() or "fatal" in result.lower():
-            return False, result
+        if not result.ok:
+            return False, result.output
 
-        return True, result
+        return True, result.output
 
     async def verify_commit(
         self,
@@ -213,9 +212,9 @@ class CommitSigner:
         )
 
         # Git returns error code for invalid signatures
-        is_valid = "good signature" in result.lower() or "valid signature" in result.lower()
+        is_valid = "good signature" in result.output.lower() or "valid signature" in result.output.lower()
 
-        return is_valid, result
+        return is_valid, result.output
 
     async def get_commit_signature_info(
         self,
@@ -237,7 +236,7 @@ class CommitSigner:
             cwd=repo_path
         )
 
-        parts = result.strip().split("|")
+        parts = result.output.strip().split("|")
 
         status_map = {
             "G": "good",
