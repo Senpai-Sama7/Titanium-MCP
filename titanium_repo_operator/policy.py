@@ -80,10 +80,6 @@ PROHIBITED_PATTERNS = [
     "**/*.key",
     "**/config/production*",
     "**/prod/**",
-    "Dockerfile",  # Require approval for container changes
-    "docker-compose*.yml",
-    ".github/workflows/*",  # Require approval for CI changes
-    "pyproject.toml",  # Require approval for dependency changes
     "requirements*.txt",
 ]
 
@@ -97,6 +93,15 @@ APPROVAL_REQUIRED_PATTERNS = [
     "package.json",
     "**/security/**",
 ]
+
+ALLOWED_COMMANDS = {
+    "git",
+    "pytest",
+    "ruff",
+    "mypy",
+    "rg",
+    "which",
+}
 
 
 class PolicyEngine:
@@ -234,6 +239,13 @@ class PolicyEngine:
 
         cmd_name = command[0] if command else ""
         cmd_args = " ".join(command[1:]) if len(command) > 1 else ""
+
+        if cmd_name not in ALLOWED_COMMANDS:
+            return PolicyResult(
+                decision=PolicyDecision.REQUIRE_APPROVAL,
+                requires_approval=True,
+                approval_reason=f"Command '{cmd_name}' is not in the allowlist",
+            )
 
         if cmd_name in dangerous_commands:
             for pattern in dangerous_commands[cmd_name]:

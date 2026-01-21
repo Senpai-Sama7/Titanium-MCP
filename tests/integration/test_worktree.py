@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from titanium_repo_operator import audit, worktree
+from titanium_repo_operator.utils import CommandResult
 
 @pytest.mark.asyncio
 class TestWorktreeLifecycle:
@@ -126,10 +127,10 @@ class TestPatchApplication:
 
         async def fake_run_shell_cmd(args, cwd=None, timeout=0):
             if args[:2] == ["git", "apply"] and "--check" in args:
-                return ""
+                return CommandResult(stdout="", stderr="", returncode=0, duration_ms=0.0)
             if args[:2] == ["git", "apply"]:
-                return "error: patch failed"
-            return ""
+                return CommandResult(stdout="", stderr="error: patch failed", returncode=1, duration_ms=0.0)
+            return CommandResult(stdout="", stderr="", returncode=0, duration_ms=0.0)
 
         monkeypatch.setattr(worktree, "run_shell_cmd", fake_run_shell_cmd)
 

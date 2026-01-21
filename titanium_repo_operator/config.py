@@ -22,7 +22,9 @@ AUDITS_DIR.mkdir(exist_ok=True)
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # Audit configuration
-AUDIT_HMAC_KEY = os.environ.get("TITANIUM_AUDIT_KEY", "dev-key-change-me")
+DEFAULT_AUDIT_HMAC_KEY = "dev-key-change-me"
+AUDIT_HMAC_KEY = os.environ.get("TITANIUM_AUDIT_KEY", DEFAULT_AUDIT_HMAC_KEY)
+DEV_MODE = os.environ.get("TITANIUM_DEV_MODE", "").lower() == "true"
 
 # Agent constraints (policy defaults)
 MAX_LOC_PER_PATCH = int(os.environ.get("TITANIUM_MAX_LOC", "500"))

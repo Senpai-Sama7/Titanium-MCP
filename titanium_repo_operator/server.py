@@ -30,7 +30,15 @@ except ImportError:
 from fastmcp import FastMCP
 
 # Import centralized configuration
-from .config import LOG_LEVEL, REPO_ROOT, WORKTREES_DIR, AUDITS_DIR
+from .config import (
+    AUDIT_HMAC_KEY,
+    AUDITS_DIR,
+    DEFAULT_AUDIT_HMAC_KEY,
+    DEV_MODE,
+    LOG_LEVEL,
+    REPO_ROOT,
+    WORKTREES_DIR,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -44,6 +52,9 @@ log.info("Titanium Repo Operator starting...")
 log.info("REPO_ROOT: %s", REPO_ROOT)
 log.info("WORKTREES_DIR: %s", WORKTREES_DIR)
 log.info("AUDITS_DIR: %s", AUDITS_DIR)
+if not DEV_MODE and AUDIT_HMAC_KEY == DEFAULT_AUDIT_HMAC_KEY:
+    log.error("TITANIUM_AUDIT_KEY must be set in non-dev environments.")
+    raise SystemExit(1)
 
 # Instantiate FastMCP
 mcp = FastMCP("TitaniumOperator")
