@@ -25,6 +25,8 @@ LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 DEFAULT_AUDIT_HMAC_KEY = "dev-key-change-me"
 AUDIT_HMAC_KEY = os.environ.get("TITANIUM_AUDIT_KEY", DEFAULT_AUDIT_HMAC_KEY)
 DEV_MODE = os.environ.get("TITANIUM_DEV_MODE", "").lower() == "true"
+AUTO_APPROVE_IN_DEV = os.environ.get("TITANIUM_AUTO_APPROVE_IN_DEV", "").lower() == "true"
+APPROVAL_TOKEN = os.environ.get("TITANIUM_APPROVAL_TOKEN")
 
 # Agent constraints (policy defaults)
 MAX_LOC_PER_PATCH = int(os.environ.get("TITANIUM_MAX_LOC", "500"))
