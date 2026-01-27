@@ -144,6 +144,7 @@ def register_tools(mcp: FastMCP) -> None:
         """
         p = validate_path(path)
         results = []
+        max_results = 1000
         if not recursive:
             for entry in os.scandir(p):
                 if not entry.is_file():
@@ -154,10 +155,11 @@ def register_tools(mcp: FastMCP) -> None:
                 if rel == ".":
                     rel = ""
                 results.append(os.path.join(rel, entry.name))
-                if len(results) >= 1000:
+                if len(results) >= max_results:
                     break
         else:
             base_depth = len(str(p).split(os.sep))
+            reached_max = False
 
             for root, dirs, files in os.walk(p):
                 depth = len(root.split(os.sep)) - base_depth
@@ -174,8 +176,11 @@ def register_tools(mcp: FastMCP) -> None:
                     if f.endswith('.pyc'):
                         continue
                     results.append(os.path.join(rel, f))
-                    if len(results) >= 1000:
+                    if len(results) >= max_results:
+                        reached_max = True
                         break
+                if reached_max:
+                    break
 
         return "\n".join(results) or "No files found."
 
@@ -311,7 +316,7 @@ def register_tools(mcp: FastMCP) -> None:
         args = ["rg", "--line-number", "--context", "1"]
         if not case_sensitive:
             args.append("--ignore-case")
-        args.append(query)
+        args.extend(["--", query])
 
         # Check policy for command
         policy_result = evaluate_command(args)
