@@ -16,6 +16,7 @@ from fastmcp import FastMCP
 from .approval import get_approval_manager, require_approval
 from .audit import log_audit
 from .config import REPO_ROOT
+from .config import APPROVAL_TOKEN
 from .policy import PolicyDecision, evaluate_command, evaluate_patch, evaluate_push
 from .signing import get_commit_signer
 from .utils import atomic_write, run_shell_cmd, truncate_output, validate_path
@@ -50,6 +51,13 @@ def _extract_affected_files(patch_text: str) -> list[str]:
 
 def register_tools(mcp: FastMCP) -> None:
     """Register all MCP tools with the server."""
+
+    def _validate_approval_token(token: str | None) -> str | None:
+        if APPROVAL_TOKEN is None:
+            return None
+        if token != APPROVAL_TOKEN:
+            return "Error: approval token required or invalid."
+        return None
 
     # =========================================================================
     # File Operations
@@ -144,6 +152,7 @@ def register_tools(mcp: FastMCP) -> None:
         """
         p = validate_path(path)
         results = []
+        max_results = 1000
         if not recursive:
             for entry in os.scandir(p):
                 if not entry.is_file():
@@ -154,10 +163,11 @@ def register_tools(mcp: FastMCP) -> None:
                 if rel == ".":
                     rel = ""
                 results.append(os.path.join(rel, entry.name))
-                if len(results) >= 1000:
+                if len(results) >= max_results:
                     break
         else:
             base_depth = len(str(p).split(os.sep))
+            reached_max = False
 
             for root, dirs, files in os.walk(p):
                 depth = len(root.split(os.sep)) - base_depth
@@ -174,8 +184,11 @@ def register_tools(mcp: FastMCP) -> None:
                     if f.endswith('.pyc'):
                         continue
                     results.append(os.path.join(rel, f))
-                    if len(results) >= 1000:
+                    if len(results) >= max_results:
+                        reached_max = True
                         break
+                if reached_max:
+                    break
 
         return "\n".join(results) or "No files found."
 
@@ -311,7 +324,7 @@ def register_tools(mcp: FastMCP) -> None:
         args = ["rg", "--line-number", "--context", "1"]
         if not case_sensitive:
             args.append("--ignore-case")
-        args.append(query)
+        args.extend(["--", query])
 
         # Check policy for command
         policy_result = evaluate_command(args)
@@ -590,12 +603,18 @@ def register_tools(mcp: FastMCP) -> None:
     # =========================================================================
 
     @mcp.tool()
-    async def list_pending_approvals() -> str:
+    async def list_pending_approvals(token: str | None = None) -> str:
         """List pending approval requests.
+
+        Args:
+            token: Optional approval token if configured
 
         Returns:
             JSON array of pending approvals
         """
+        error = _validate_approval_token(token)
+        if error:
+            return error
         manager = get_approval_manager()
         pending = manager.list_pending()
         return json.dumps([req.to_dict() for req in pending], indent=2)
@@ -604,7 +623,8 @@ def register_tools(mcp: FastMCP) -> None:
     async def approve_request(
         request_id: str,
         reviewer: str = "cli_user",
-        comment: str | None = None
+        comment: str | None = None,
+        token: str | None = None,
     ) -> str:
         """Approve a pending request.
 
@@ -612,10 +632,14 @@ def register_tools(mcp: FastMCP) -> None:
             request_id: ID of the request to approve
             reviewer: Name of the approver
             comment: Optional comment
+            token: Optional approval token if configured
 
         Returns:
             Confirmation message
         """
+        error = _validate_approval_token(token)
+        if error:
+            return error
         manager = get_approval_manager()
         try:
             request = manager.approve(request_id, reviewer, comment)
@@ -627,7 +651,8 @@ def register_tools(mcp: FastMCP) -> None:
     async def reject_request(
         request_id: str,
         reviewer: str = "cli_user",
-        comment: str | None = None
+        comment: str | None = None,
+        token: str | None = None,
     ) -> str:
         """Reject a pending request.
 
@@ -635,10 +660,14 @@ def register_tools(mcp: FastMCP) -> None:
             request_id: ID of the request to reject
             reviewer: Name of the rejector
             comment: Optional rejection reason
+            token: Optional approval token if configured
 
         Returns:
             Confirmation message
         """
+        error = _validate_approval_token(token)
+        if error:
+            return error
         manager = get_approval_manager()
         try:
             request = manager.reject(request_id, reviewer, comment)

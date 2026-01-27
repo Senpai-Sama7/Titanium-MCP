@@ -121,6 +121,10 @@ async def run_shell_cmd(
 
     except asyncio.TimeoutError:
         proc.kill()
+        try:
+            await proc.wait()
+        except Exception:
+            pass
         duration_ms = (time.perf_counter() - start) * 1000
         return CommandResult(
             stdout="",

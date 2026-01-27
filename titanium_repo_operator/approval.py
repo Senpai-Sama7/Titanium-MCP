@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 
 from .audit import log_audit
-from .config import AUDITS_DIR
+from .config import AUDITS_DIR, AUTO_APPROVE_IN_DEV, DEV_MODE
 from .utils import atomic_write
 
 
@@ -391,10 +391,8 @@ async def require_approval(
     Returns:
         True if approved, False if rejected or expired
     """
-    import os
-
     # Auto-approve in development mode if enabled
-    if auto_approve_in_dev and os.environ.get("TITANIUM_DEV_MODE", "").lower() == "true":
+    if auto_approve_in_dev and DEV_MODE and AUTO_APPROVE_IN_DEV:
         log_audit("approval_auto_approved", {
             "operation": operation,
             "reason": "Development mode auto-approval",

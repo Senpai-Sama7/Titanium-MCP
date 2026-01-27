@@ -12,9 +12,15 @@ from fastmcp import FastMCP
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
-def _setup_mcp(temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> FastMCP:
+def _setup_mcp(
+    temp_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    approval_token: str | None = None,
+) -> FastMCP:
     monkeypatch.setenv("REPO_ROOT", str(temp_dir))
     monkeypatch.chdir(temp_dir)
+    if approval_token is not None:
+        monkeypatch.setenv("TITANIUM_APPROVAL_TOKEN", approval_token)
 
     import titanium_repo_operator.config as config
     importlib.reload(config)
@@ -26,6 +32,17 @@ def _setup_mcp(temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> FastMCP:
     mcp = FastMCP("test")
     mcp_tools.register_tools(mcp)
     return mcp
+
+
+def test_list_pending_approvals_requires_token(
+    temp_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mcp = _setup_mcp(temp_dir, monkeypatch, approval_token="token-123")
+    tool = asyncio.run(mcp.get_tool("list_pending_approvals"))
+
+    result = asyncio.run(tool.fn())
+
+    assert "approval token required or invalid" in result
 
 
 def test_list_files_non_recursive_ignores_max_depth(
